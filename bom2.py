@@ -21,8 +21,8 @@ def process_file(file_path):
             ancestorCellMultiplier = 1
             previousCellMultiplier = 1
             previousBOMlvl = 1
-            for row in sheet.iter_rows(min_col=1, max_col=4, min_row=1, max_row=sheet.max_row):
-                BOMlvl = row[0]
+            for row in sheet.iter_rows(min_col=1, max_col=8, min_row=1, max_row=sheet.max_row):
+                BOMlvl = row[3]
                 if BOMlvl.value is not None and isinstance(BOMlvl.value, (int, float)):
                     if BOMlvl.value > previousBOMlvl:  # at a top
                         ancestorCellIndex = BOMlvl.row - 1
@@ -37,7 +37,7 @@ def process_file(file_path):
                                 elif subCell.col_idx == 4:
                                     subCell.value = subCell.value * ancestorCellMultiplier  # QtyPer
                     previousBOMlvl = BOMlvl.value
-                    previousCellMultiplier = row[3].value
+                    previousCellMultiplier = row[7].value
                 else:
                     if previousBOMlvl > 2:  # at a bottom
                         nestedFound += 1
