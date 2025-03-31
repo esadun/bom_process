@@ -7,12 +7,32 @@ from tkinterdnd2 import TkinterDnD, DND_FILES
 
 def process_file(file_path):
     try:
-        print("Running...")
+        BOMIdx=3 #0
+        QtyIdx=7 #3
+        SheetIdx=0
+        print("Running, going to load workbook...")
         select_button["state"]="disabled"
         #root.update()
         # Load the workbook
         wb = openpyxl.load_workbook(file_path)
-        sheet = wb.active
+        print (wb.sheetnames)
+        print("...loaded.")
+        #sheet = wb.active
+        sheets = wb.sheetnames
+        sheet = wb[sheets[SheetIdx]]
+        print("...opened sheet ",SheetIdx)
+        print("cols: ",sheet.max_column,", rows:",sheet.max_row)
+        print("********************")
+        for row in sheet.iter_rows(min_col=1, max_col=sheet.max_column, min_row=1, max_row=1):
+            for cellIdx, cell in enumerate(row):
+                if cellIdx==BOMIdx:
+                    print("[BOM-->]"+str(cell.value or ""))
+                elif cellIdx==QtyIdx:
+                    print("[QTY-->]"+str(cell.value or ""))
+                else:
+                    print("          "+str(cell.value or ""))
+        print("********************")
+        print("Now going to process.")
         nestedBeyond2 = True
         while nestedBeyond2:
             nestedFound = 0
@@ -21,33 +41,57 @@ def process_file(file_path):
             ancestorCellMultiplier = 1
             previousCellMultiplier = 1
             previousBOMlvl = 1
-            for row in sheet.iter_rows(min_col=1, max_col=4, min_row=1, max_row=sheet.max_row):
-                BOMlvl = row[0]
+            maxRow=sheet.max_row
+            for row in sheet.iter_rows(min_col=1, max_col=(max(BOMIdx,QtyIdx)+1), min_row=1, max_row=sheet.max_row):
+                print("On row ",row[0].row, "(BOM=",row[BOMIdx].value,")")
+                BOMlvl = row[BOMIdx]
                 if BOMlvl.value is not None and isinstance(BOMlvl.value, (int, float)):
+                    print("         Numeric BOM")
+                    if BOMlvl.row==maxRow and BOMlvl.value > 2:
+                        print("         Very bottom of sheet with BOM in need of reduction")
+                        #print("AT BOTTOM, SEE BOM:",BOMlvl.value)
                     if BOMlvl.value > previousBOMlvl:  # at a top
+                        print("         A2")
                         ancestorCellIndex = BOMlvl.row - 1
                         ancestorCellMultiplier = previousCellMultiplier
-                    elif BOMlvl.value < previousBOMlvl and previousBOMlvl > 2:  # at a bottom
+                    elif (BOMlvl.value < previousBOMlvl and previousBOMlvl > 2):  # at a bottom
+                        print("         A3")
                         nestedFound += 1
                         nestedBeyond2 = True
-                        for subRow in sheet.iter_rows(min_row=ancestorCellIndex + 1, max_row=BOMlvl.row - 1, min_col=1, max_col=4):
+                        print("         Going to loop from ",ancestorCellIndex + 1," to ",BOMlvl.row - 1)
+                        for subRow in sheet.iter_rows(min_row=ancestorCellIndex + 1, max_row=BOMlvl.row - 1, min_col=1, max_col=(max(BOMIdx,QtyIdx)+1)):
+                        #for subRow in sheet.iter_rows(min_row=ancestorCellIndex + 1, max_row=BOMlvl.row, min_col=1, max_col=(max(BOMIdx,QtyIdx)+1)):
+                            print("         A.Inner looping, on sub-row ",subRow[0].row)
                             for subCell in subRow:
-                                if subCell.col_idx == 1:
+                                #print("                  sub-cell ",subCell.col_idx)
+                                if subCell.col_idx == (BOMIdx+1):
+                                    print("                  modifing BOM from ",subCell.value," to ",subCell.value - 1)
                                     subCell.value = subCell.value - 1  # BOM LEVEL                        
-                                elif subCell.col_idx == 4:
+                                elif subCell.col_idx == (QtyIdx+1):
+                                    print("                  modifing QTY from ",subCell.value," to ",subCell.value * ancestorCellMultiplier)
                                     subCell.value = subCell.value * ancestorCellMultiplier  # QtyPer
+                        break
                     previousBOMlvl = BOMlvl.value
-                    previousCellMultiplier = row[3].value
+                    previousCellMultiplier = row[QtyIdx].value
                 else:
+                    print("         Non-numeric BOM")
                     if previousBOMlvl > 2:  # at a bottom
+                        print("         B1")
                         nestedFound += 1
                         nestedBeyond2 = True
-                        for subRow in sheet.iter_rows(min_row=ancestorCellIndex + 1, max_row=BOMlvl.row - 1, min_col=1, max_col=4):
+                        print("         Going to loop from ",ancestorCellIndex + 1," to ",BOMlvl.row - 1)
+                        for subRow in sheet.iter_rows(min_row=ancestorCellIndex + 1, max_row=BOMlvl.row - 1, min_col=1, max_col=(max(BOMIdx,QtyIdx)+1)):
+                        #for subRow in sheet.iter_rows(min_row=ancestorCellIndex + 1, max_row=BOMlvl.row, min_col=1, max_col=(max(BOMIdx,QtyIdx)+1)):
+                            print("         B.Inner looping, on sub-row ",subRow[0].row)
                             for subCell in subRow:
-                                if subCell.col_idx == 1:
+                                print("                  sub-cell ",subCell.col_idx)
+                                if subCell.col_idx == (BOMIdx+1):
+                                    print("                  modifing BOM from ",subCell.value," to ",subCell.value - 1)
                                     subCell.value = subCell.value - 1  # BOM LEVEL                        
-                                elif subCell.col_idx == 4:
+                                elif subCell.col_idx == (QtyIdx+1):
+                                    print("                  modifing QTY from ",subCell.value," to ",subCell.value * ancestorCellMultiplier)
                                     subCell.value = subCell.value * ancestorCellMultiplier  # QtyPer
+                        break
                     previousBOMlvl = 1
 
             #print("IVE FOUND: ", nestedFound)
@@ -102,3 +146,12 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+'''
+#go from top to bottom
+    if current cell > previous cell, ancestor = current cell-1; get index
+    else if current cell < previous cell and current cell -1 > 2, are at a bottom
+        ancestor index + 1-->current cell -1
+            val*=ancestor
+            BOM--
+'''
