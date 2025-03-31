@@ -45,21 +45,25 @@ def process_file(file_path):
             for row in sheet.iter_rows(min_col=1, max_col=(max(BOMIdx,QtyIdx)+1), min_row=1, max_row=sheet.max_row):
                 print("On row ",row[0].row, "(BOM=",row[BOMIdx].value,")")
                 BOMlvl = row[BOMIdx]
+                maxRowForLoop=BOMlvl.row - 1
+                atBottom=False
                 if BOMlvl.value is not None and isinstance(BOMlvl.value, (int, float)):
                     print("         Numeric BOM")
                     if BOMlvl.row==maxRow and BOMlvl.value > 2:
                         print("         Very bottom of sheet with BOM in need of reduction")
+                        maxRowForLoop = maxRowForLoop + 1
+                        atBottom=True
                         #print("AT BOTTOM, SEE BOM:",BOMlvl.value)
                     if BOMlvl.value > previousBOMlvl:  # at a top
                         print("         A2")
                         ancestorCellIndex = BOMlvl.row - 1
                         ancestorCellMultiplier = previousCellMultiplier
-                    elif (BOMlvl.value < previousBOMlvl and previousBOMlvl > 2):  # at a bottom
+                    elif atBottom or (BOMlvl.value < previousBOMlvl and previousBOMlvl > 2):  # at a bottom
                         print("         A3")
                         nestedFound += 1
                         nestedBeyond2 = True
                         print("         Going to loop from ",ancestorCellIndex + 1," to ",BOMlvl.row - 1)
-                        for subRow in sheet.iter_rows(min_row=ancestorCellIndex + 1, max_row=BOMlvl.row - 1, min_col=1, max_col=(max(BOMIdx,QtyIdx)+1)):
+                        for subRow in sheet.iter_rows(min_row=ancestorCellIndex + 1, max_row=maxRowForLoop, min_col=1, max_col=(max(BOMIdx,QtyIdx)+1)):
                         #for subRow in sheet.iter_rows(min_row=ancestorCellIndex + 1, max_row=BOMlvl.row, min_col=1, max_col=(max(BOMIdx,QtyIdx)+1)):
                             print("         A.Inner looping, on sub-row ",subRow[0].row)
                             for subCell in subRow:
