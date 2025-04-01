@@ -42,6 +42,7 @@ def process_file(file_path):
             previousCellMultiplier = 1
             previousBOMlvl = 1
             maxRow=sheet.max_row
+            lastTopLevelIndex = 1
             for row in sheet.iter_rows(min_col=1, max_col=(max(BOMIdx,QtyIdx)+1), min_row=1, max_row=sheet.max_row):
                 print("On row ",row[0].row, "(BOM=",row[BOMIdx].value,")")
                 BOMlvl = row[BOMIdx]
@@ -49,6 +50,8 @@ def process_file(file_path):
                 atBottom=False
                 if BOMlvl.value is not None and isinstance(BOMlvl.value, (int, float)):
                     print("         Numeric BOM")
+                    if (BOMlvl.value==1):
+                        lastTopLevelIndex=BOMlvl.row
                     if BOMlvl.row==maxRow and BOMlvl.value > 2:
                         print("         Very bottom of sheet with BOM in need of reduction")
                         maxRowForLoop = maxRowForLoop + 1
